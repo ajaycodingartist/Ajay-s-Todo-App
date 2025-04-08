@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}To-Do Detail{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow border-0">
+        <div class="card-body">
+          <h3 class="card-title mb-3">📝 <span id="todo-title">{{ todo.title }}</span></h3>
+          <p class="card-text" id="todo-description">{{ todo.description|linebreaks }}</p>
+          <p>Status:
+            <span id="todo-status" class="badge bg-{{ todo.completed|yesno:'success,secondary' }}">
+              {{ todo.completed|yesno:"Completed,Pending" }}
+            </span>
+          </p>
+
+          <!-- Toggle Status -->
+          <form method="post" action="{% url 'todo_detail_view' todo.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="update_status" value="true">
+            <button class="btn btn-outline-primary">Toggle Status</button>
+            <a href="/" class="btn btn-secondary ms-2">← Back</a>
+          </form>
+
+          <!-- Edit Buttons -->
+          <hr>
+          <h5 class="mt-4">✏️ Edit Task</h5>
+          <form id="edit-form" class="mt-3">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="edit-title" class="form-label">Title</label>
+              <input type="text" id="edit-title" class="form-control" value="{{ todo.title }}" required>
+            </div>
+            <div class="mb-3">
+              <label for="edit-description" class="form-label">Description</label>
+              <textarea id="edit-description" class="form-control" rows="3">{{ todo.description }}</textarea>
+            </div>
+            <div class="d-grid d-md-block">
+              <button type="submit" class="btn btn-success">💾 Save Changes</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const todoId = "{{ todo.id }}";
+  const API_URL = `/todos/${todoId}/`;
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  // Handle edit form submission
+  document.getElementById('edit-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const newTitle = document.getElementById('edit-title').value.trim();
+    const newDescription = document.getElementById('edit-description').value.trim();
+
+    fetch(API_URL, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+      },
+      body: JSON.stringify({
+        title: newTitle,
+        description: newDescription
+      })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to update To-Do');
+      return res.json();
+    })
+    .then(data => {
+      // Update UI
+      document.getElementById('todo-title').textContent = data.title;
+      document.getElementById('todo-description').textContent = data.description || '';
+      alert('✅ To-Do updated successfully!');
+    })
+    .catch(err => alert(err.message));
+  });
+</script>
+{% endblock %}
